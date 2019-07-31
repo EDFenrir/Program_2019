@@ -95,18 +95,18 @@ void coreTaskOne( void * pvParameters ){
     ValorPotenciometro = analogRead(PinoPotenciometro);// Faz a leitura do valor do conersor ADC e joga para variável ValorPotenciometro.
     ValorPWM = map(ValorPotenciometro, 0, 4095, 255, 0); 
     ledcWrite(ledChannel, ValorPWM);
-    Serial.println(ValorPWM);
-    delay(500);
+    //Serial.println(ValorPWM);
+    delay(100);
     }
 }
 
 void coreTaskTwo( void * pvParameters ){
     while(true){
     u8g2.clearBuffer();
-    drawLogo();
+    //drawLogo();
     drawURL();
     u8g2.sendBuffer();
-    delay(1000);
+    delay(500);
     }
 }
 
@@ -158,15 +158,36 @@ void drawLogo(void)
 void drawURL(void)
 {
 #ifndef MINI_LOGO
-  u8g2.setFont(u8g2_font_4x6_tr);
+  u8g2.setFont(u8g2_font_inr30_mr);
   if ( u8g2.getDisplayHeight() < 59 )
   {
-    u8g2.drawStr(89,20,"github.com");
-    u8g2.drawStr(73,29,"/olikraus/u8g2");
+    //u8g2.drawStr(89,20,"github.com");
+    //u8g2.drawStr(73,29,"/olikraus/u8g2");
   }
   else
   {
-    u8g2.drawStr(1,54,"Eletronica e dados");
+    u8g2.setFont(u8g2_font_smart_patrol_nbp_tf);
+    u8g2.drawStr(1, 12,"km/h");
+    u8g2.drawStr(80, 12,"Temp");
+    u8g2.drawStr(90, 45,"Pot");
+    
+    //Velocidade
+    u8g2.setFont(u8g2_font_inr30_mr);
+    u8g2.setCursor(10,55);
+    u8g2.print((int)((((float)ValorPWM)/255)*100));
+
+    //Temperatura
+    u8g2.setFont(u8g2_font_6x13_tf);
+    u8g2.setCursor(90,27);
+    u8g2.print(temp);
+    u8g2.drawStr(105, 27,"C");
+
+    //line box
+    u8g2.drawLine(0,16,75,16);
+    u8g2.drawLine(75,0,75,63);
+    u8g2.drawLine(75,32,128,32);
+
+    
   }
 #endif
 }
