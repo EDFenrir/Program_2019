@@ -1,12 +1,17 @@
 #include <OneWire.h>
 #include <DallasTemperature.h>
 
-OneWire pin(4);
+#include <U8g2lib.h>
+#include <SPI.h>
+
+U8G2_ST7920_128X64_F_SW_SPI u8g2(U8G2_R0, 4, 2, 0, 16); // Enable=6, RW=data=5, RS=4, Rst=17
+
+OneWire pin(15);
 DallasTemperature bus(&pin);
 DeviceAddress sensor;
 
 // the number of the LED pin
-const int ledPin = 16;  // 16 corresponds to GPIO16
+const int ledPin = 17;  // 16 corresponds to GPIO16
 
 #define PinoPotenciometro  34 // Da o Nome de PinoPotenciometro a constante A0.
 
@@ -23,6 +28,8 @@ static uint8_t taskCoreZero = 0;
 static uint8_t taskCoreOne  = 1;
 
 void setup(){
+
+  u8g2.begin();
 
   Serial.begin(115200);
 
@@ -56,6 +63,17 @@ void setup(){
                     NULL);       /* referência para a tarefa (pode ser NULL) */
 
     delay(500); //tempo para a tarefa iniciar
+
+     //coreTaskOne: atualizar as informações do display
+     xTaskCreate(
+                    coreTaskTwo,   /* função que implementa a tarefa */
+                    "coreTaskTwo", /* nome da tarefa */
+                    10000,      /* número de palavras a serem alocadas para uso com a pilha da tarefa */
+                    NULL,       /* parâmetro de entrada para a tarefa (pode ser NULL) */
+                    2,          /* prioridade da tarefa (0 a N) */
+                    NULL);       /* referência para a tarefa (pode ser NULL) */
+
+    delay(500); //tempo para a tarefa iniciar
   
  
 }
@@ -80,4 +98,75 @@ void coreTaskOne( void * pvParameters ){
     Serial.println(ValorPWM);
     delay(500);
     }
+}
+
+void coreTaskTwo( void * pvParameters ){
+    while(true){
+    u8g2.clearBuffer();
+    drawLogo();
+    drawURL();
+    u8g2.sendBuffer();
+    delay(1000);
+    }
+}
+
+void drawLogo(void)
+{
+    u8g2.setFontMode(1);  // Transparent
+#ifdef MINI_LOGO
+
+    u8g2.setFontDirection(0);
+    u8g2.setFont(u8g2_font_inb16_mf);
+    u8g2.drawStr(0, 22, "U");
+    
+    u8g2.setFontDirection(1);
+    u8g2.setFont(u8g2_font_inb19_mn);
+    u8g2.drawStr(14,8,"8");
+    
+    u8g2.setFontDirection(0);
+    u8g2.setFont(u8g2_font_inb16_mf);
+    u8g2.drawStr(36,22,"g");
+    u8g2.drawStr(48,22,"\xb2");
+    
+    u8g2.drawHLine(2, 25, 34);
+    u8g2.drawHLine(3, 26, 34);
+    u8g2.drawVLine(32, 22, 12);
+    u8g2.drawVLine(33, 23, 12);
+#else
+
+    u8g2.setFontDirection(0);
+    u8g2.setFont(u8g2_font_inb24_mf);
+    u8g2.drawStr(0, 30, "U");
+    
+    u8g2.setFontDirection(1);
+    u8g2.setFont(u8g2_font_inb30_mn);
+    u8g2.drawStr(21,8,"8");
+        
+    u8g2.setFontDirection(0);
+    u8g2.setFont(u8g2_font_inb24_mf);
+    u8g2.drawStr(51,30,"g");
+    u8g2.drawStr(67,30,"\xb2");
+    
+    u8g2.drawHLine(2, 35, 47);
+    u8g2.drawHLine(3, 36, 47);
+    u8g2.drawVLine(45, 32, 12);
+    u8g2.drawVLine(46, 33, 12);
+    
+#endif
+}
+
+void drawURL(void)
+{
+#ifndef MINI_LOGO
+  u8g2.setFont(u8g2_font_4x6_tr);
+  if ( u8g2.getDisplayHeight() < 59 )
+  {
+    u8g2.drawStr(89,20,"github.com");
+    u8g2.drawStr(73,29,"/olikraus/u8g2");
+  }
+  else
+  {
+    u8g2.drawStr(1,54,"Eletronica e dados");
+  }
+#endif
 }
