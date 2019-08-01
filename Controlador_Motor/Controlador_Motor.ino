@@ -1,6 +1,6 @@
 #include <OneWire.h>
 #include <DallasTemperature.h>
-
+#include <ACS712.h>
 #include <U8g2lib.h>
 #include <SPI.h>
 
@@ -9,6 +9,10 @@ U8G2_ST7920_128X64_F_SW_SPI u8g2(U8G2_R0, 4, 2, 0, 16); // Enable=6, RW=data=5, 
 OneWire pin(15);
 DallasTemperature bus(&pin);
 DeviceAddress sensor;
+
+//Pin sensor current
+#define pinoCorrente = 26;
+ACS712 sensor(ACS712_30A, pinoCorrente);
 
 volatile byte rpmcount;
 
@@ -29,6 +33,7 @@ const int resolution = 8;
 int ValorPotenciometro = 0; // Declaração da variável do tipo inteiro chamda de ValorPotenciometro .      
 int ValorPWM = 0;
 int temp = 0;
+float P = 0;    
 
 //variaveis que indicam o núcleo
 static uint8_t taskCoreZero = 0;
@@ -43,7 +48,11 @@ void IRAM_ATTR rpm_fun()
 
 void setup(){
 
-  
+  //sensor current
+  Serial.begin(9600);
+  sensor.calibrate();
+
+  //hall sensor  
   pinMode(25, INPUT);
   attachInterrupt(25, rpm_fun, RISING);
 
@@ -104,6 +113,15 @@ void setup(){
 
     delay(500); //tempo para a tarefa iniciar
   
+     xTaskCreate(
+                    coreTaskFour,   /* função que implementa a tarefa */
+                    "coreTaskFour", /* nome da tarefa */
+                    10000,      /* número de palavras a serem alocadas para uso com a pilha da tarefa */
+                    NULL,       /* parâmetro de entrada para a tarefa (pode ser NULL) */
+                    2,          /* prioridade da tarefa (0 a N) */
+                    NULL);       /* referência para a tarefa (pode ser NULL) */
+
+    delay(500); //tempo para a tarefa iniciar
  
 }
  
@@ -152,6 +170,21 @@ void coreTaskThree( void * pvParameters ){
    }
 }
 
+void coreTaskFour( void * pvParameters ){
+    while(true){
+        
+        float U = 36;
+
+        float I = sensor.getCurrentDC();
+
+        // To calculate the power we need voltage multiplied by current
+        float P = U * I;
+
+        Serial.println(String("P = ") + P + " Watts");
+
+        delay(1000);
+   }
+}
 void drawLogo(void)
 {
     u8g2.setFontMode(1);  // Transparent
@@ -217,7 +250,7 @@ void drawURL(void)
     u8g2.setFont(u8g2_font_inr30_mr);
     u8g2.setCursor(10,55);
     //u8g2.print((int)((((float)ValorPWM)/255)*100));
-    u8g2.print(rpm2/10);
+    u8g2.print((int)(2*3.1416*0.025*(rpm2/60)*3.6);
     
     //Temperatura
     u8g2.setFont(u8g2_font_6x13_tf);
@@ -225,11 +258,19 @@ void drawURL(void)
     u8g2.print(temp);
     u8g2.drawStr(105, 27,"C");
 
-    //potenciometro
+    //Potencia
     u8g2.setFont(u8g2_font_6x13_tf);
     u8g2.setCursor(90,60);
-    u8g2.print((int)((((float)ValorPWM)/255)*100));
+    u8g2.print((float)P);
+    u8g2.drawStr(105, 60,"W");
     
+    //Potenciometro
+    u8g2.setFont(u8g2_font_chroma48medium8_8n);
+    u8g2.setCursor(10,62);
+    u8g2.print(temp);
+    u8g2.drawStr(17, 62," %");
+    
+
     //line box
     u8g2.drawLine(0,16,75,16);
     u8g2.drawLine(75,0,75,63);
