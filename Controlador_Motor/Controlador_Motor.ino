@@ -10,6 +10,13 @@ OneWire pin(15);
 DallasTemperature bus(&pin);
 DeviceAddress sensor;
 
+volatile byte rpmcount;
+
+unsigned int rpm = 0;
+unsigned int rpm2 = 0;
+
+unsigned long timeold = 0;
+
 // the number of the LED pin
 const int ledPin = 17;  // 16 corresponds to GPIO16
 
@@ -27,7 +34,18 @@ int temp = 0;
 static uint8_t taskCoreZero = 0;
 static uint8_t taskCoreOne  = 1;
 
+
+void IRAM_ATTR rpm_fun()
+{
+  rpmcount++;
+  //Each rotation, this interrupt function is run twice
+}
+
 void setup(){
+
+  
+  pinMode(25, INPUT);
+  attachInterrupt(25, rpm_fun, RISING);
 
   u8g2.begin();
 
@@ -74,6 +92,17 @@ void setup(){
                     NULL);       /* referência para a tarefa (pode ser NULL) */
 
     delay(500); //tempo para a tarefa iniciar
+    
+    //coreTaskOne: atualizar as informações do display
+     xTaskCreate(
+                    coreTaskThree,   /* função que implementa a tarefa */
+                    "coreTaskThree", /* nome da tarefa */
+                    10000,      /* número de palavras a serem alocadas para uso com a pilha da tarefa */
+                    NULL,       /* parâmetro de entrada para a tarefa (pode ser NULL) */
+                    2,          /* prioridade da tarefa (0 a N) */
+                    NULL);       /* referência para a tarefa (pode ser NULL) */
+
+    delay(500); //tempo para a tarefa iniciar
   
  
 }
@@ -85,7 +114,6 @@ void coreTaskZero( void * pvParameters ){
     while(true){
     bus.requestTemperatures(); 
     temp = bus.getTempC(sensor);
-    Serial.println(temp);
     delay(500);                    
     }
 }
@@ -93,7 +121,7 @@ void coreTaskZero( void * pvParameters ){
 void coreTaskOne( void * pvParameters ){
     while(true){
     ValorPotenciometro = analogRead(PinoPotenciometro);// Faz a leitura do valor do conersor ADC e joga para variável ValorPotenciometro.
-    ValorPWM = map(ValorPotenciometro, 0, 4095, 255, 0); 
+    ValorPWM = map(ValorPotenciometro, 0, 4095, 0, 255); 
     ledcWrite(ledChannel, ValorPWM);
     //Serial.println(ValorPWM);
     delay(100);
@@ -108,6 +136,20 @@ void coreTaskTwo( void * pvParameters ){
     u8g2.sendBuffer();
     delay(500);
     }
+}
+
+void coreTaskThree( void * pvParameters ){
+    while(true){
+     if (rpmcount >= 10) { 
+      //Update RPM every 20 counts, increase this for better RPM resolution,
+      //decrease for faster update
+      rpm = 30*1000/(millis() - timeold)*rpmcount;
+      timeold = millis();
+      rpmcount = 0;
+      rpm2 = rpm * 2;
+      Serial.println(rpm2,DEC);
+      }
+   }
 }
 
 void drawLogo(void)
@@ -174,14 +216,20 @@ void drawURL(void)
     //Velocidade
     u8g2.setFont(u8g2_font_inr30_mr);
     u8g2.setCursor(10,55);
-    u8g2.print((int)((((float)ValorPWM)/255)*100));
-
+    //u8g2.print((int)((((float)ValorPWM)/255)*100));
+    u8g2.print(rpm2/10);
+    
     //Temperatura
     u8g2.setFont(u8g2_font_6x13_tf);
     u8g2.setCursor(90,27);
     u8g2.print(temp);
     u8g2.drawStr(105, 27,"C");
 
+    //potenciometro
+    u8g2.setFont(u8g2_font_6x13_tf);
+    u8g2.setCursor(90,60);
+    u8g2.print((int)((((float)ValorPWM)/255)*100));
+    
     //line box
     u8g2.drawLine(0,16,75,16);
     u8g2.drawLine(75,0,75,63);
