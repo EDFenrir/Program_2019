@@ -12,7 +12,7 @@ DeviceAddress sensor;
 
 //Pin sensor current
 #define pinoCorrente = 26;
-ACS712 sensor(ACS712_30A, pinoCorrente);
+ACS712 sensorCorrente(ACS712_30A, 26);
 
 volatile byte rpmcount;
 
@@ -43,6 +43,7 @@ static uint8_t taskCoreOne  = 1;
 void IRAM_ATTR rpm_fun()
 {
   rpmcount++;
+  Serial.println(rpmcount);
   //Each rotation, this interrupt function is run twice
 }
 
@@ -50,11 +51,11 @@ void setup(){
 
   //sensor current
   Serial.begin(9600);
-  sensor.calibrate();
+  sensorCorrente.calibrate();
 
   //hall sensor  
-  pinMode(25, INPUT);
-  attachInterrupt(25, rpm_fun, RISING);
+  pinMode(32, INPUT_PULLUP);
+  attachInterrupt(32, rpm_fun, RISING);
 
   u8g2.begin();
 
@@ -165,8 +166,9 @@ void coreTaskThree( void * pvParameters ){
       timeold = millis();
       rpmcount = 0;
       rpm2 = rpm * 2;
-      Serial.println(rpm2,DEC);
+      //Serial.println(rpm2,DEC);
       }
+      delay(10);
    }
 }
 
@@ -175,12 +177,12 @@ void coreTaskFour( void * pvParameters ){
         
         float U = 36;
 
-        float I = sensor.getCurrentDC();
+        float I = sensorCorrente.getCurrentDC();
 
         // To calculate the power we need voltage multiplied by current
         float P = U * I;
 
-        Serial.println(String("P = ") + P + " Watts");
+        //Serial.println(String("P = ") + P + " Watts");
 
         delay(1000);
    }
@@ -250,7 +252,7 @@ void drawURL(void)
     u8g2.setFont(u8g2_font_inr30_mr);
     u8g2.setCursor(10,55);
     //u8g2.print((int)((((float)ValorPWM)/255)*100));
-    u8g2.print((int)(2*3.1416*0.025*(rpm2/60)*3.6);
+    u8g2.print((int)(2*3.1416*0.025*(rpm2/60)*3.6));
     
     //Temperatura
     u8g2.setFont(u8g2_font_6x13_tf);
@@ -265,10 +267,10 @@ void drawURL(void)
     u8g2.drawStr(105, 60,"W");
     
     //Potenciometro
-    u8g2.setFont(u8g2_font_chroma48medium8_8n);
-    u8g2.setCursor(10,62);
-    u8g2.print(temp);
-    u8g2.drawStr(17, 62," %");
+    u8g2.setFont(u8g2_font_6x13_tf);
+    u8g2.setCursor(45,62);
+    u8g2.print((int)((((float)ValorPWM)/255)*100));
+    u8g2.drawStr(60, 62," %");
     
 
     //line box
