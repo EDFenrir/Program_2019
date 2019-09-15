@@ -153,45 +153,33 @@ void coreTaskThree( void * pvParameters ){
    }
 }
 
-void drawDisplay(void)
+void drawDisplay(void)      //writes data to the display
 {
-#ifndef MINI_LOGO
-  u8g2.setFont(u8g2_font_inr30_mr);
-  if ( u8g2.getDisplayHeight() < 59 )
-  {
-    //u8g2.drawStr(89,20,"github.com");
-    //u8g2.drawStr(73,29,"/olikraus/u8g2");
-  }
-  else
-  {
-    u8g2.setFont(u8g2_font_smart_patrol_nbp_tf);
-    u8g2.drawStr(90, 45,"Pot");
+     
 
-    
-    //Velocidade
-    
-    u8g2.setFont(u8g2_font_6x13_tf);
+    //Speed    
+    u8g2.setFont(u8g2_font_6x13_tf); //set the font for a height and width of 6x13 pixels
     u8g2.drawStr(35,25,"km/h");
     u8g2.setFont(u8g2_font_smart_patrol_nbp_tf);
     u8g2.setCursor(10,15);
     u8g2.print((int) rpm2);
     u8g2.setCursor(10,25);
-    u8g2.print((int)(2*3.1416*0.25*(rpm2/60)*3.6));
-    
-    //Temperatura
+    u8g2.print((int)(2*3.1416*0.25*(rpm2/60)*3.6));//convert RPM to km/h
+
+    //Temperature
     u8g2.setFont(u8g2_font_6x13_tf);
     u8g2.setCursor(75,27);
     u8g2.print(temp);
     u8g2.drawStr(110, 27,"C");
 
-    //Potenciometro
+    //Potentiometer
     u8g2.setFont(u8g2_font_6x13_tf);
     u8g2.setCursor(25,62);
     u8g2.print((int)(100-((((float)PWMValue)/255)*100));
     u8g2.drawStr(40, 62," %");
-    
 
-    //line box
+
+    //draw lines to define the boxes on the display
     u8g2.drawLine(0,31,128,31);
     u8g2.drawLine(0,45,128,45);
     u8g2.drawLine(64,0,64,31);
@@ -200,5 +188,4 @@ void drawDisplay(void)
 
     
   }
-#endif
 }
