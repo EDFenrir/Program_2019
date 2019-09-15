@@ -1,3 +1,6 @@
+/*This code is used to ontrol the first microcontroller, the one that takes care of the sensors and the 
+  PWM signal creation.   */
+
 #include <OneWire.h>
 #include <DallasTemperature.h>
 #include <U8g2lib.h>
@@ -8,7 +11,7 @@ U8G2_ST7920_128X64_F_SW_SPI u8g2(U8G2_R0, 4, 2, 0, 16); // Enable=6, RW=data=5, 
 OneWire pin(39);
 DallasTemperature bus(&pin);
 DeviceAddress sensor;
-//test
+//variables responsible for the rpm measure
 volatile byte rpmcount;
 
 unsigned int rpm = 0;
@@ -19,14 +22,14 @@ unsigned long timeold = 0;
 // the number of the LED pin
 const int ledPin = 17;  // 16 corresponds to GPIO16
 
-#define PinoPotenciometro  34 // Da o Nome de PinoPotenciometro a constante A0.
+#define Potpin  34 // Defines Potpin as pin 34
 
 // setting PWM properties
 const int freq = 5000;
 const int ledChannel = 0;
 const int resolution = 8;
-int ValorPotenciometro = 0; // Declaração da variável do tipo inteiro chamda de ValorPotenciometro .      
-int ValorPWM = 0;
+int PotValue = 0;      
+int PWMValue = 0;
 int temp = 0;   
  
 //variaveis que indicam o núcleo
@@ -45,6 +48,7 @@ void setup(){
 
   //hall sensor  
   pinMode(15, INPUT_PULLUP);
+  //Interruption sensor attached to pin 15, that stops the program in case rising edge detection
   attachInterrupt(15, rpm_fun, RISING);
 
   u8g2.begin();
@@ -60,49 +64,48 @@ void setup(){
   // attach the channel to the GPIO to be controlled
   ledcAttachPin(ledPin, ledChannel);
   
-  //Create a task that will be executed in coreTaskZero function, with priority 1 and execution on core 0
+  //coreTaskZero: used for the temperature sensor
   xTaskCreate(
-                    coreTaskZero,   /* função que implementa a tarefa */
-                    "coreTaskZero", /* nome da tarefa */
-                    10000,      /* número de palavras a serem alocadas para uso com a pilha da tarefa */
-                    NULL,       /* parâmetro de entrada para a tarefa (pode ser NULL) */
-                    2,          /* prioridade da tarefa (0 a N) */
-                    NULL);       /* referência para a tarefa (pode ser NULL) */
+                    coreTaskZero,   // function that implements the task
+                    "coreTaskZero", //task name
+                    10000,          //number of words alocated for the task stack      
+                    NULL,           //default input task
+                    2,              //task priority
+                    NULL);       //task reference
                     
-  delay(500); // delay to initialize the task
+  delay(500); // delay to begin the next task
 
-  //coreTaskOne: atualizar as informações do display
+  //coreTaskOne: used for reading the potentiometer 
   xTaskCreate(
-                    coreTaskOne,   /* função que implementa a tarefa */
-                    "coreTaskOne", /* nome da tarefa */
-                    10000,      /* número de palavras a serem alocadas para uso com a pilha da tarefa */
-                    NULL,       /* parâmetro de entrada para a tarefa (pode ser NULL) */
-                    3,          /* prioridade da tarefa (0 a N) */
-                    NULL);       /* referência para a tarefa (pode ser NULL) */
+                    coreTaskOne,   
+                    "coreTaskOne", 
+                    10000,      
+                    NULL,       
+                    3,          
+                    NULL);       
 
-    delay(500); //tempo para a tarefa iniciar
-
-     //coreTaskOne: atualizar as informações do display
+    delay(500); 
+     //coreTaskTwo: used for update the display data
      xTaskCreate(
-                    coreTaskTwo,   /* função que implementa a tarefa */
-                    "coreTaskTwo", /* nome da tarefa */
-                    10000,      /* número de palavras a serem alocadas para uso com a pilha da tarefa */
-                    NULL,       /* parâmetro de entrada para a tarefa (pode ser NULL) */
-                    2,          /* prioridade da tarefa (0 a N) */
-                    NULL);       /* referência para a tarefa (pode ser NULL) */
+                    coreTaskTwo,   
+                    "coreTaskTwo", 
+                    10000,      
+                    NULL,       
+                    2,          
+                    NULL);      
 
-    delay(500); //tempo para a tarefa iniciar
+    delay(500); 
     
-    //coreTaskOne: atualizar as informações do display
+    //coreTaskThree: speed sensor 
      xTaskCreate(
-                    coreTaskThree,   /* função que implementa a tarefa */
-                    "coreTaskThree", /* nome da tarefa */
-                    10000,      /* número de palavras a serem alocadas para uso com a pilha da tarefa */
-                    NULL,       /* parâmetro de entrada para a tarefa (pode ser NULL) */
-                    2,          /* prioridade da tarefa (0 a N) */
-                    NULL);       /* referência para a tarefa (pode ser NULL) */
+                    coreTaskThree,   
+                    "coreTaskThree", 
+                    10000,      
+                    NULL,       
+                    2,          
+                    NULL);       
 
-    delay(500); //tempo para a tarefa iniciar
+    delay(500); 
   
  
 }
@@ -113,17 +116,16 @@ void loop(){
 void coreTaskZero( void * pvParameters ){
     while(true){
     bus.requestTemperatures(); 
-    temp = bus.getTempC(sensor);
+    temp = bus.getTempC(sensor); //read temperature
     delay(500);                    
     }
 }
 
 void coreTaskOne( void * pvParameters ){
     while(true){
-    ValorPotenciometro = analogRead(PinoPotenciometro);// Faz a leitura do valor do conersor ADC e joga para variável ValorPotenciometro.
-    ValorPWM = map(ValorPotenciometro, 0, 4095, 0, 255); 
-    ledcWrite(ledChannel, ValorPWM);
-    //Serial.println(ValorPWM);
+    PotValue = analogRead(Potpin);// Make the reading of the ADC converter
+    PWMValue = map(PotValue, 0, 4095, 0, 255); //map the potentiometer
+    ledcWrite(ledChannel, PWMValue); //writes the PWM signal
     delay(100);
     }
 }
@@ -131,8 +133,7 @@ void coreTaskOne( void * pvParameters ){
 void coreTaskTwo( void * pvParameters ){
     while(true){
     u8g2.clearBuffer();
-    //drawLogo();
-    drawURL();
+    drawDisplay();//draws the display
     u8g2.sendBuffer();
     delay(500);
     }
@@ -147,58 +148,12 @@ void coreTaskThree( void * pvParameters ){
       timeold = millis();
       rpmcount = 0;
       rpm2 = rpm * 2;
-      //Serial.println(rpm2,DEC);
       }
       delay(10);
    }
 }
 
-void drawLogo(void)
-{
-    u8g2.setFontMode(1);  // Transparent
-#ifdef MINI_LOGO
-
-    u8g2.setFontDirection(0);
-    u8g2.setFont(u8g2_font_inb16_mf);
-    u8g2.drawStr(0, 22, "U");
-    
-    u8g2.setFontDirection(1);
-    u8g2.setFont(u8g2_font_inb19_mn);
-    u8g2.drawStr(14,8,"8");
-    
-    u8g2.setFontDirection(0);
-    u8g2.setFont(u8g2_font_inb16_mf);
-    u8g2.drawStr(36,22,"g");
-    u8g2.drawStr(48,22,"\xb2");
-    
-    u8g2.drawHLine(2, 25, 34);
-    u8g2.drawHLine(3, 26, 34);
-    u8g2.drawVLine(32, 22, 12);
-    u8g2.drawVLine(33, 23, 12);
-#else
-
-    u8g2.setFontDirection(0);
-    u8g2.setFont(u8g2_font_inb24_mf);
-    u8g2.drawStr(0, 30, "U");
-    
-    u8g2.setFontDirection(1);
-    u8g2.setFont(u8g2_font_inb30_mn);
-    u8g2.drawStr(21,8,"8");
-        
-    u8g2.setFontDirection(0);
-    u8g2.setFont(u8g2_font_inb24_mf);
-    u8g2.drawStr(51,30,"g");
-    u8g2.drawStr(67,30,"\xb2");
-    
-    u8g2.drawHLine(2, 35, 47);
-    u8g2.drawHLine(3, 36, 47);
-    u8g2.drawVLine(45, 32, 12);
-    u8g2.drawVLine(46, 33, 12);
-    
-#endif
-}
-
-void drawURL(void)
+void drawDisplay(void)
 {
 #ifndef MINI_LOGO
   u8g2.setFont(u8g2_font_inr30_mr);
@@ -221,7 +176,7 @@ void drawURL(void)
     u8g2.setCursor(10,15);
     u8g2.print((int) rpm2);
     u8g2.setCursor(10,25);
-    u8g2.print((int)(2*3.1416*0.025*(rpm2/60)*3.6));
+    u8g2.print((int)(2*3.1416*0.25*(rpm2/60)*3.6));
     
     //Temperatura
     u8g2.setFont(u8g2_font_6x13_tf);
@@ -232,7 +187,7 @@ void drawURL(void)
     //Potenciometro
     u8g2.setFont(u8g2_font_6x13_tf);
     u8g2.setCursor(25,62);
-    u8g2.print((int)((((float)ValorPWM)/255)*100));
+    u8g2.print((int)(100-((((float)PWMValue)/255)*100));
     u8g2.drawStr(40, 62," %");
     
 
