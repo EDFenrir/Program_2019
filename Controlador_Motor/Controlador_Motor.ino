@@ -8,9 +8,11 @@
 
 U8G2_ST7920_128X64_F_SW_SPI u8g2(U8G2_R0, 4, 2, 0, 16); // Enable=6, RW=data=5, RS=4, Rst=17
 
-OneWire pin(39);
+//data initialization regarding temperature sensor
+OneWire pin(32);
 DallasTemperature bus(&pin);
 DeviceAddress sensor;
+
 //variables responsible for the rpm measure
 volatile byte rpmcount;
 
@@ -32,9 +34,6 @@ int PotValue = 0;
 int PWMValue = 0;
 int temp = 0;   
  
-//variaveis que indicam o núcleo
-static uint8_t taskCoreZero = 0;
-static uint8_t taskCoreOne  = 1;
 
 
 void IRAM_ATTR rpm_fun()
@@ -175,7 +174,7 @@ void drawDisplay(void)      //writes data to the display
     //Potentiometer
     u8g2.setFont(u8g2_font_6x13_tf);
     u8g2.setCursor(25,62);
-    u8g2.print((int)(100-((((float)PWMValue)/255)*100));
+    u8g2.print((int)(100-((((float)PWMValue)/255)*100)));
     u8g2.drawStr(40, 62," %");
 
 
@@ -188,4 +187,3 @@ void drawDisplay(void)      //writes data to the display
 
     
   }
-}
